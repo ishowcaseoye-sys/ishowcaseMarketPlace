@@ -1,0 +1,78 @@
+package chat.chat.components.widgets.subscriptions
+
+import androidx.compose.runtime.Composable
+import chat.chat.components.widgets.AssetImageButton
+import chat.chat.components.widgets.SegmentedButtonPair
+import chat.chat.models.ChannelListItemData
+import chat.chat.utils.Asset
+import chat.chat.utils.SpacedRow
+import chat.chat.utils.Styles
+import chat.chat.utils.TextBox
+import chat.chat.utils.noShrink
+import com.varabyte.kobweb.compose.css.FontWeight
+import com.varabyte.kobweb.compose.foundation.layout.Arrangement
+import com.varabyte.kobweb.compose.foundation.layout.Column
+import com.varabyte.kobweb.compose.ui.Modifier
+import com.varabyte.kobweb.compose.ui.modifiers.border
+import com.varabyte.kobweb.compose.ui.modifiers.borderRadius
+import com.varabyte.kobweb.compose.ui.modifiers.height
+import com.varabyte.kobweb.compose.ui.modifiers.padding
+import com.varabyte.kobweb.compose.ui.modifiers.size
+import org.jetbrains.compose.web.css.LineStyle
+import org.jetbrains.compose.web.css.px
+
+@Composable
+fun MessagePostCard(data: ChannelListItemData.Post) {
+    Column(
+        modifier = Modifier
+            .border(1.px, LineStyle.Solid, Styles.DIVIDER)
+            .borderRadius(16.px)
+            .noShrink()
+            .padding(16.px)
+            .size(356.px, 289.px),
+        verticalArrangement = Arrangement.SpaceBetween,
+    ) {
+        SpacedRow(
+            centerContentVertically = false,
+            modifier = Modifier.height(160.px),
+            spacePx = 8,
+        ) {
+            TextBox(
+                color = Styles.OFF_WHITE,
+                lineHeight = 25,
+                modifier = Modifier.weight(1),
+                size = 18,
+                text = data.message,
+                weight = FontWeight.Medium,
+            )
+            AssetImageButton(Asset.Icon.MORE) {}
+        }
+        TextBox(
+            color = Styles.VIDEO_CARD_SECONDARY_TEXT,
+            lineHeight = 26.5,
+            text = "${data.daysSinceUploaded} ago",
+        )
+        SpacedRow(8) {
+            SegmentedButtonPair(
+                isDense = true,
+                assetPathLeft = Asset.Path.LIKED,
+                labelLeft = data.likeCount,
+                assetPathRight = Asset.Path.DISLIKE,
+                labelRight = data.dislikeCount,
+                onClickLeft = {},
+                onClickRight = {},
+                containerColor = Styles.SURFACE_ELEVATED,
+            )
+            SegmentedButtonPair(
+                isDense = true,
+                assetPathLeft = Asset.Path.COMMENTS,
+                labelLeft = data.commentCount,
+                assetPathRight = Asset.Path.SHARE,
+                onClickLeft = {},
+                onClickRight = {},
+                containerColor = Styles.SURFACE_ELEVATED,
+                assetRightStroked = true,
+            )
+        }
+    }
+}

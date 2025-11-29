@@ -1,0 +1,426 @@
+package chat.chat.components.sections
+
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import com.varabyte.kobweb.browser.dom.ElementTarget
+import com.varabyte.kobweb.browser.dom.clearFocus
+import com.varabyte.kobweb.compose.css.Background
+import com.varabyte.kobweb.compose.css.Cursor
+import com.varabyte.kobweb.compose.css.background
+import com.varabyte.kobweb.compose.css.cursor
+import com.varabyte.kobweb.compose.foundation.layout.Arrangement
+import com.varabyte.kobweb.compose.foundation.layout.Box
+import com.varabyte.kobweb.compose.foundation.layout.Row
+import com.varabyte.kobweb.compose.foundation.layout.Spacer
+import com.varabyte.kobweb.compose.ui.Alignment
+import com.varabyte.kobweb.compose.ui.Modifier
+import com.varabyte.kobweb.compose.ui.graphics.Colors
+import com.varabyte.kobweb.compose.ui.modifiers.background
+import com.varabyte.kobweb.compose.ui.modifiers.border
+import com.varabyte.kobweb.compose.ui.modifiers.borderRadius
+import com.varabyte.kobweb.compose.ui.modifiers.display
+import com.varabyte.kobweb.compose.ui.modifiers.fillMaxSize
+import com.varabyte.kobweb.compose.ui.modifiers.fillMaxWidth
+import com.varabyte.kobweb.compose.ui.modifiers.fontSize
+import com.varabyte.kobweb.compose.ui.modifiers.height
+import com.varabyte.kobweb.compose.ui.modifiers.margin
+import com.varabyte.kobweb.compose.ui.modifiers.maxWidth
+import com.varabyte.kobweb.compose.ui.modifiers.padding
+import com.varabyte.kobweb.compose.ui.modifiers.width
+import com.varabyte.kobweb.compose.ui.modifiers.zIndex
+import com.varabyte.kobweb.core.PageContext
+import com.varabyte.kobweb.framework.annotations.DelicateApi
+import com.varabyte.kobweb.silk.components.graphics.Image
+import com.varabyte.kobweb.silk.components.overlay.Tooltip
+import com.varabyte.kobweb.silk.style.CssStyle
+import com.varabyte.kobweb.silk.style.breakpoint.Breakpoint
+import com.varabyte.kobweb.silk.style.toModifier
+import com.varabyte.kobweb.silk.style.until
+import com.varabyte.kobweb.silk.theme.breakpoint.rememberBreakpoint
+import chat.chat.components.widgets.AssetImageButton
+import chat.chat.components.widgets.AssetSvg
+import chat.chat.utils.Asset
+import chat.chat.utils.Constants
+import chat.chat.utils.Styles
+import chat.chat.utils.clickable
+import chat.chat.utils.toComposeColor
+import chat.chat.utils.toKobwebColor
+import org.jetbrains.compose.web.attributes.placeholder
+import org.jetbrains.compose.web.css.DisplayStyle
+import org.jetbrains.compose.web.css.LineStyle
+import org.jetbrains.compose.web.css.border
+import org.jetbrains.compose.web.css.flex
+import org.jetbrains.compose.web.css.fontSize
+import org.jetbrains.compose.web.css.marginLeft
+import org.jetbrains.compose.web.css.marginRight
+import org.jetbrains.compose.web.css.outline
+import org.jetbrains.compose.web.css.paddingBottom
+import org.jetbrains.compose.web.css.paddingTop
+import org.jetbrains.compose.web.css.percent
+import org.jetbrains.compose.web.css.px
+import org.jetbrains.compose.web.css.width
+import org.jetbrains.compose.web.dom.TextInput
+import org.w3c.dom.HTMLElement
+
+@OptIn(DelicateApi::class)
+@Composable
+fun TopBar(
+    modifier: Modifier = Modifier,
+    onLogoClick: () -> Unit,
+    onDrawerButtonClick: () -> Unit,
+    onOpenNotificationPanel: () -> Unit,
+    onSearch: (query: String) -> Unit,
+    context: PageContext
+) {
+    var addBtnRef by remember { mutableStateOf<HTMLElement?>(null) }
+    var notificationBtnRef by remember { mutableStateOf<HTMLElement?>(null) }
+    var settingsBtnRef by remember { mutableStateOf<HTMLElement?>(null) }
+    var xBtnRef by remember { mutableStateOf<HTMLElement?>(null) }
+    var instagramBtnRef by remember { mutableStateOf<HTMLElement?>(null) }
+    var tiktokBtnRef by remember { mutableStateOf<HTMLElement?>(null) }
+    var youTubeBtnRef by remember { mutableStateOf<HTMLElement?>(null) }
+    var accountBtnRef by remember { mutableStateOf<HTMLElement?>(null) }
+    var textInputRef by remember { mutableStateOf<HTMLElement?>(null) }
+    var faceBookBtnRef by remember { mutableStateOf<HTMLElement?>(null) }
+    var account by remember { mutableStateOf<HTMLElement?>(null) }
+
+    val breakpoint = rememberBreakpoint()
+
+    var searchQuery by remember { mutableStateOf("") }
+    var isTextFieldFocused by remember { mutableStateOf(false) }
+    var showSearchBar by remember { mutableStateOf(false) }
+
+    val animatedTextFieldBorderColor by animateColorAsState(
+        if (isTextFieldFocused) Styles.WHITE.toComposeColor()
+        else Styles.BORDER_COLOR.toComposeColor()
+    )
+    val animatedTextFieldContentColor by animateColorAsState(
+        if (isTextFieldFocused) Color.White
+        else Color.White.copy(alpha = Styles.Opacity.TOP_BAR_CONTENT)
+    )
+
+    val movableSearchBar = remember {
+        movableContentOf<Modifier> { modifier ->
+            Row(
+                modifier = modifier
+                    .maxWidth(640.px)
+                    .margin(left = 24.px, right = 12.px)
+                    .border(
+                        width = if (isTextFieldFocused) 1.5.px else 1.px,
+                        style = LineStyle.Solid,
+                        color = animatedTextFieldBorderColor.toKobwebColor()
+                    )
+                    .borderRadius(24.px),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AssetSvg(
+                    id = Asset.Path::SEARCH.name,
+                    path = Asset.Path.SEARCH,
+                    primaryColor = animatedTextFieldContentColor.toKobwebColor(),
+                ) {
+                    marginLeft(16.px)
+                    marginRight(10.px)
+                }
+                TextInput(value = searchQuery) {
+                    ref { element ->
+                        textInputRef = element
+                        onDispose {}
+                    }
+                    onBlur { isTextFieldFocused = false }
+                    onFocus { isTextFieldFocused = true }
+                    onInput { event -> searchQuery = event.value }
+                    onKeyUp { event ->
+                        event.stopPropagation()
+                        if (event.key == "Enter") {
+                            if (searchQuery.isNotBlank()) {
+                                onSearch(searchQuery)
+                                searchQuery = ""
+                            }
+                            textInputRef?.clearFocus()
+                        }
+                    }
+                    inputMode("search")
+                    placeholder("Search")
+                    style {
+                        background(Background.None)
+                        border(0.px)
+                        //color(Styles.WHITE.toString())
+                        flex(1)
+                        fontSize(16.px)
+                        outline("none")
+                        paddingBottom(12.px)
+                        paddingTop(12.px)
+                        width(100.percent)
+                    }
+                }
+                if (searchQuery.isNotEmpty()) {
+                    AssetSvg(
+                        id = Asset.Path::CLOSE.name,
+                        path = Asset.Path.CLOSE,
+                        primaryColor = Colors.White,
+                        onClick = { searchQuery = "" },
+                    ) {
+                        cursor(Cursor.Pointer)
+                        marginRight(12.px)
+                    }
+                } else {
+                    Box(modifier = Modifier.width(36.px))
+                }
+                AssetSvg(
+                    id = Asset.Path::MIC.name,
+                    path = Asset.Path.MIC,
+                    primaryColor = animatedTextFieldContentColor.toKobwebColor(),
+                    onClick = {}
+                ) {
+                    cursor(Cursor.Pointer)
+                    marginRight(20.px)
+                }
+            }
+        }
+    }
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(TopBarDefaults.HEIGHT),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(modifier = Modifier.width(4.px))
+            AssetImageButton(asset = Asset.Icon.MENU, onClick = onDrawerButtonClick)
+            Box(modifier = Modifier.width(12.px))
+            Image(
+                modifier = Modifier
+                    .height(100.px)
+                    .padding(topBottom = 4.px)
+                    .clickable(onClick = onLogoClick),
+                src = Asset.Icon.LOGO_SHOWCASE,
+            )
+
+            Spacer()
+            if (breakpoint != Breakpoint.ZERO) movableSearchBar(Modifier.weight(1.5f))
+            Spacer()
+
+            // Actions
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.px),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AssetImageButton(
+                    modifier = TopBarSearchButtonStyle.toModifier(),
+                    asset = Asset.Icon.SEARCH,
+                ) { showSearchBar = true }
+
+                /* if (breakpoint isGreaterThan Breakpoint.SM) {
+                    AssetImageButton(
+                        asset = Asset.Icon.ADD,
+                        onRefAvailable = { addBtnRef = it },
+                    ) {}
+
+                    addBtnRef?.let {
+                        Tooltip(
+                            target = ElementTarget.of(it),
+                            text = "Add Video / Post",
+                            showDelayMs = Constants.POPUP_SHOW_DELAY_MS,
+                        )
+                    }
+                }*/
+
+                notificationBtnRef?.let {
+                    Tooltip(
+                        target = ElementTarget.of(it),
+                        text = "Notifications",
+                        modifier = Modifier.fontSize(16.px),
+                        showDelayMs = Constants.POPUP_SHOW_DELAY_MS,
+                    )
+                }
+
+                instagramBtnRef?.let {
+                    Tooltip(
+                        target = ElementTarget.of(it),
+                        text = "Instagram",
+                        showDelayMs = Constants.POPUP_SHOW_DELAY_MS,
+                    )
+                }
+
+                xBtnRef?.let {
+                    Tooltip(
+                        target = ElementTarget.of(it),
+                        text = "Twitter-X",
+                        showDelayMs = Constants.POPUP_SHOW_DELAY_MS,
+                    )
+                }
+
+                faceBookBtnRef?.let {
+                    Tooltip(
+                        target = ElementTarget.of(it),
+                        text = "FaceBook",
+                        showDelayMs = Constants.POPUP_SHOW_DELAY_MS,
+                    )
+                }
+
+                youTubeBtnRef?.let {
+                    Tooltip(
+                        target = ElementTarget.of(it),
+                        text = "Youtube",
+                        showDelayMs = Constants.POPUP_SHOW_DELAY_MS,
+                    )
+                }
+
+                tiktokBtnRef?.let {
+                    Tooltip(
+                        target = ElementTarget.of(it),
+                        text = "TiKTok",
+                        showDelayMs = Constants.POPUP_SHOW_DELAY_MS,
+                    )
+                }
+/*
+                AssetImageButton(
+                    asset = Asset.Social.REALTIME_COLORS,
+                    onRefAvailable = {
+                        //settingsBtnRef = it
+                    },
+                ) {}
+
+ */
+
+             /*   AssetImageButton(
+                    asset = Asset.Social.LINKEDIN,
+                    onRefAvailable = {
+                        //settingsBtnRef = it
+                    },
+                ) {}
+*/
+                AssetImageButton(
+                    asset = Asset.Social.INSTAGRAM,
+                    onRefAvailable = {
+                        instagramBtnRef = it
+                    },
+                    onClick = {
+                        context.router.navigateTo("https://www.instagram.com/ishowcase_?igsh=d3RrcDNzdnl5b3Ri")
+                    },
+
+                )
+
+                AssetImageButton(
+                    asset = Asset.Social.YOUTUBE,
+                    onRefAvailable = {
+                        youTubeBtnRef = it
+                    },
+                    onClick = {
+                        context.router.navigateTo("https://www.youtube.com/channel/UCZgAc4cAbLFP-KSvKE56XKA")
+                    },
+
+                )
+
+                AssetImageButton(
+                    asset = Asset.Social.TIKTOK,
+                    onRefAvailable = {
+                        tiktokBtnRef = it
+                    },
+                    onClick = {
+                        context.router.navigateTo( "https://www.tiktok.com/@user1146200627203?is_from_webapp=1&sender_device=pc"  )
+                    }
+                )
+
+                AssetImageButton(
+                    asset = Asset.Social.TWITTER,
+                    onRefAvailable = {
+                        xBtnRef = it
+                    },
+                    onClick = {
+                        context.router.navigateTo( "https://x.com/isoftfusion?s=21"  )
+                    }
+                )
+
+                AssetImageButton(
+                    asset = Asset.Social.FACEBOOK,
+                    onRefAvailable = { faceBookBtnRef = it },
+                    onClick = {
+                        context.router.navigateTo( "https://www.facebook.com/share/1MdCAL4P1m/?mibextid=wwXIfr")
+                    }
+                )
+
+                AssetImageButton(
+                    asset = Asset.Icon.NOTIFS,
+                    onRefAvailable = { notificationBtnRef = it },
+                    onClick = onOpenNotificationPanel,
+                )
+
+                AssetImageButton(
+                    asset = Asset.Icon.SETTINGS,
+                    onRefAvailable = { settingsBtnRef = it },
+                ) {}
+
+                settingsBtnRef?.let {
+                    Tooltip(
+                        target = ElementTarget.of(it),
+                        text = "Settings",
+                        showDelayMs = Constants.POPUP_SHOW_DELAY_MS,
+                    )
+                }
+
+              /*  AssetImageButton(
+                    modifier = Modifier.size(48.px),
+                    onRefAvailable = { accountBtnRef = it },
+                    asset = Asset.Channel.JUXTOPPOSED,
+                ) {}*/
+
+                accountBtnRef?.let {
+                    Tooltip(
+                        target = ElementTarget.of(it),
+                        text = "Account",
+                        showDelayMs = Constants.POPUP_SHOW_DELAY_MS,
+                    )
+                }
+
+             /*   faceBookBtnRef?.let {
+                    Tooltip(
+                        target = ElementTarget.of(it),
+                        text = "FaceBook",
+                        //showDelayMs = Constants.POPUP_SHOW_DELAY_MS,
+                    )
+                }*/
+
+                AssetImageButton(
+                    asset = Asset.Social.PROFILE,
+                    onRefAvailable = {
+                        accountBtnRef = it
+                                     },
+                    onClick = onLogoClick,
+                )
+
+            }
+        }
+
+        if (breakpoint == Breakpoint.ZERO && showSearchBar) {
+            Row(
+                modifier = Modifier.zIndex(1).background(Styles.SURFACE).fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AssetImageButton(asset = Asset.Icon.ARROW_LEFT) {
+                    showSearchBar = false
+                    searchQuery = ""
+                }
+                movableSearchBar(Modifier.weight(1))
+            }
+        }
+    }
+}
+
+val TopBarSearchButtonStyle = CssStyle {
+    base { Modifier.display(DisplayStyle.None) }
+    until(Breakpoint.SM) { Modifier.display(DisplayStyle.Inherit) }
+}
+
+object TopBarDefaults {
+    val HEIGHT = 72.px
+}
+
+fun onClickFaceBook() {
+    println("Got here")
+}

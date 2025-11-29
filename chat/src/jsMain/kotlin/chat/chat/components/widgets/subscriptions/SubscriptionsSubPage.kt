@@ -1,0 +1,222 @@
+package chat.chat.components.widgets.subscriptions
+
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import chat.chat.components.widgets.AssetImageButton
+import chat.chat.components.widgets.AssetSvgButton
+import chat.chat.components.widgets.AssetSvgButtonType
+import chat.chat.components.widgets.HorizontalDivider
+import chat.chat.components.widgets.SubscribeButton
+import chat.chat.components.widgets.ThumbnailGrid
+import chat.chat.components.widgets.VerticalDivider
+import chat.chat.components.widgets.context.RoundedSearchTextField
+import chat.chat.data.SubscriptionsDataProvider
+import chat.chat.models.ChannelListItemData
+import chat.chat.pages.ScrollableSpacedRow
+import chat.chat.utils.AnimatedVisibility
+import chat.chat.utils.Asset
+import chat.chat.utils.Crossfade
+import chat.chat.utils.SpacedColumn
+import chat.chat.utils.SpacedRow
+import chat.chat.utils.Styles
+import chat.chat.utils.TextBox
+import chat.chat.utils.Wrap
+import chat.chat.utils.clickable
+import com.varabyte.kobweb.compose.css.FontWeight
+import com.varabyte.kobweb.compose.foundation.layout.Box
+import com.varabyte.kobweb.compose.foundation.layout.Column
+import com.varabyte.kobweb.compose.foundation.layout.Spacer
+import com.varabyte.kobweb.compose.ui.Modifier
+import com.varabyte.kobweb.compose.ui.modifiers.fillMaxWidth
+import com.varabyte.kobweb.compose.ui.modifiers.height
+import com.varabyte.kobweb.compose.ui.modifiers.margin
+import com.varabyte.kobweb.compose.ui.modifiers.padding
+import com.varabyte.kobweb.compose.ui.modifiers.rotate
+import com.varabyte.kobweb.silk.components.graphics.Image
+import com.varabyte.kobweb.silk.theme.shapes.Circle
+import com.varabyte.kobweb.silk.theme.shapes.clip
+import org.jetbrains.compose.web.css.deg
+import org.jetbrains.compose.web.css.px
+
+@Composable
+fun SubscriptionsSubPage() {
+    val searchQueryState = remember { mutableStateOf("") }
+    val viewAsTimeline = remember { mutableStateOf(false) }
+    var selectedFilter by remember { mutableStateOf("All") }
+    val subscriptionsDataProvider = remember { SubscriptionsDataProvider() }
+    val timelineData = remember(subscriptionsDataProvider) {
+        subscriptionsDataProvider.getDataByTimeline()
+    }
+    val channelData = remember(subscriptionsDataProvider) {
+        subscriptionsDataProvider.getDataByChannel()
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Wrap(
+            modifier = Modifier.fillMaxWidth().margin(top = 40.px),
+            verticalGapPx = 8,
+            horizontalGapPx = 8,
+        ) {
+            AssetSvgButton(
+                endIconPath = Asset.Path.ARROW_DOWN,
+                id = "view_as_button",
+                isDense = true,
+                isSelected = false,
+                onClick = { viewAsTimeline.value = !viewAsTimeline.value },
+                secondaryText = "View as:",
+                // TODO: Make a dropdown for this
+                text = if (viewAsTimeline.value) "Timeline" else "Channel",
+                type = AssetSvgButtonType.SelectableChip,
+            )
+            VerticalDivider()
+            listOf("All", "Videos", "Posts", "Live", "Shorts").forEach { label ->
+                AssetSvgButton(
+                    id = "content_filter_type_${label}_button",
+                    isDense = true,
+                    isSelected = selectedFilter == label,
+                    onClick = { selectedFilter = label },
+                    text = label,
+                    type = AssetSvgButtonType.SelectableChip,
+                )
+            }
+            VerticalDivider()
+            if (viewAsTimeline.value) {
+                listOf("Newest", "Oldest", "Date Range").forEach { label ->
+                    AssetSvgButton(
+                        id = "sort_type_${label}_button",
+                        isDense = true,
+                        isSelected = false,
+                        onClick = {},
+                        text = if (label == "Date Range") "All" else label,
+                        type = AssetSvgButtonType.SelectableChip,
+                        startIconPath = if (label == "Date Range") Asset.Path.DATE_RANGE else null,
+                        secondaryText = if (label == "Date Range") label else null,
+                    )
+                }
+            } else {
+                AssetSvgButton(
+                    endIconPath = Asset.Path.ARROW_DOWN,
+                    id = "sort_by_button",
+                    isDense = true,
+                    isSelected = false,
+                    onClick = {},
+                    secondaryText = "Sort by: ",
+                    text = "Latest Activity",
+                    type = AssetSvgButtonType.SelectableChip,
+                )
+            }
+            VerticalDivider()
+            AssetSvgButton(
+                id = "layout_type_grid_button",
+                isDense = true,
+                isSelected = viewAsTimeline.value,
+                onClick = { viewAsTimeline.value = true },
+                type = AssetSvgButtonType.SelectableChip,
+                startIconPath = Asset.Path.GRID,
+            )
+            AssetSvgButton(
+                id = "layout_type_list_button",
+                isDense = true,
+                isSelected = !viewAsTimeline.value,
+                onClick = { viewAsTimeline.value = false },
+                type = AssetSvgButtonType.SelectableChip,
+                startIconPath = Asset.Path.LIST,
+            )
+            Spacer()
+            RoundedSearchTextField(textState = searchQueryState, hintText = "Search subscriptions")
+        }
+        Box(modifier = Modifier.height(47.px))
+        Crossfade(
+            targetState = viewAsTimeline.value,
+            modifier = Modifier.fillMaxWidth(),
+        ) { isTimelineMode ->
+            if (isTimelineMode) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    timelineData.forEach { data -> ThumbnailGrid(data = data) }
+                }
+            } else {
+                SpacedColumn(
+                    spacePx = 40,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 40.px),
+                ) {
+                    channelData.forEachIndexed { index, data ->
+                        ChannelListItem(data = data, initialIsExpanded = index == 0)
+                        if (index != 2) HorizontalDivider()
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChannelListItem(data: List<ChannelListItemData>, initialIsExpanded: Boolean) {
+    if (data.isEmpty()) return
+
+    var isExpanded by remember { mutableStateOf(initialIsExpanded) }
+    val animatedArrowRotation by animateFloatAsState(if (isExpanded) 180f else 0f)
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Wrap(
+            modifier = Modifier.fillMaxWidth().clickable { isExpanded = !isExpanded },
+            horizontalGapPx = 16,
+            verticalGapPx = 16,
+        ) {
+            SpacedRow(15) {
+                Image(
+                    modifier = Modifier.clip(Circle()),
+                    src = data.firstOrNull()?.channelAsset ?: Asset.Channel.JUXTOPPOSED,
+                    width = 46,
+                    height = 46,
+                )
+                Column {
+                    SpacedRow(8) {
+                        TextBox(
+                            lineHeight = 28.3,
+                            size = 18,
+                            text = data.firstOrNull()?.channelName ?: "Juxtopposed",
+                            weight = FontWeight.Medium,
+                        )
+                        if (data.first().isChannelVerified) {
+                            Image(src = Asset.Icon.VERIFIED_BADGE, width = 15, height = 15)
+                        }
+                    }
+                    TextBox(
+                        color = Styles.VIDEO_CARD_SECONDARY_TEXT,
+                        lineHeight = 23.1,
+                        text = "${data.first().subscribersCount} subscribers",
+                    )
+                }
+            }
+            Spacer()
+            SpacedRow(32) {
+                SubscribeButton(initialIsSubscribed = true)
+                AssetImageButton(
+                    asset = Asset.Icon.ARROW_DOWN,
+                    modifier = Modifier.rotate(animatedArrowRotation.deg)
+                )
+            }
+        }
+
+        AnimatedVisibility(isVisible = isExpanded, modifier = Modifier.fillMaxWidth()) {
+            ScrollableSpacedRow(showScrollButtons = true) {
+                data.forEach { item ->
+                   /* when (item) {
+                        is ChannelListItemData.Post -> MessagePostCard(item)
+                        is ChannelListItemData.Thumbnail -> VideoThumbnailCard(
+                            details = item.toThumbnailDetails().copy(
+                                channelAsset = null,
+                                channelName = null,
+                            ),
+                            size = VideoThumbnailCardDefaults.SIZE,
+                        )
+                    }*/
+                }
+            }
+        }
+    }
+}

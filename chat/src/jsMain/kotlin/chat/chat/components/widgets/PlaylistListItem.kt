@@ -1,0 +1,365 @@
+package chat.chat.components.widgets
+
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.updateTransition
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.varabyte.kobweb.browser.dom.observers.ResizeObserver
+import com.varabyte.kobweb.compose.css.FontWeight
+import com.varabyte.kobweb.compose.css.ObjectFit
+import com.varabyte.kobweb.compose.dom.disposableRef
+import com.varabyte.kobweb.compose.foundation.layout.Box
+import com.varabyte.kobweb.compose.ui.Alignment
+import com.varabyte.kobweb.compose.ui.Modifier
+import com.varabyte.kobweb.compose.ui.modifiers.aspectRatio
+import com.varabyte.kobweb.compose.ui.modifiers.background
+import com.varabyte.kobweb.compose.ui.modifiers.borderRadius
+import com.varabyte.kobweb.compose.ui.modifiers.display
+import com.varabyte.kobweb.compose.ui.modifiers.fillMaxSize
+import com.varabyte.kobweb.compose.ui.modifiers.fillMaxWidth
+import com.varabyte.kobweb.compose.ui.modifiers.height
+import com.varabyte.kobweb.compose.ui.modifiers.margin
+import com.varabyte.kobweb.compose.ui.modifiers.objectFit
+import com.varabyte.kobweb.compose.ui.modifiers.onMouseEnter
+import com.varabyte.kobweb.compose.ui.modifiers.onMouseLeave
+import com.varabyte.kobweb.compose.ui.modifiers.opacity
+import com.varabyte.kobweb.compose.ui.modifiers.padding
+import com.varabyte.kobweb.compose.ui.modifiers.size
+import com.varabyte.kobweb.compose.ui.modifiers.width
+import com.varabyte.kobweb.compose.ui.modifiers.zIndex
+import com.varabyte.kobweb.compose.ui.thenIf
+import com.varabyte.kobweb.silk.components.graphics.Image
+import com.varabyte.kobweb.silk.theme.shapes.Circle
+import com.varabyte.kobweb.silk.theme.shapes.clip
+import chat.chat.data.PlaylistDataProvider
+import chat.chat.models.PlaylistItemData
+import chat.chat.utils.Asset
+import chat.chat.utils.Constants
+import chat.chat.utils.generateColorPalette
+import chat.chat.utils.Crossfade
+import chat.chat.utils.LocalNavigator
+import chat.chat.utils.Route
+import chat.chat.utils.SpacedColumn
+import chat.chat.utils.SpacedRow
+import chat.chat.utils.Styles
+import chat.chat.utils.TextBox
+import chat.chat.utils.Wrap
+import chat.chat.utils.clickable
+import chat.chat.utils.rememberIsSmallBreakpoint
+import org.jetbrains.compose.web.css.CSSLengthOrPercentageValue
+import org.jetbrains.compose.web.css.Color
+import org.jetbrains.compose.web.css.DisplayStyle
+import org.jetbrains.compose.web.css.percent
+import org.jetbrains.compose.web.css.px
+import org.w3c.dom.DOMRectReadOnly
+import chat.chat.utils.noShrink
+
+@Composable
+fun PlaylistListItem(
+    data: PlaylistItemData,
+    showThumbnailColorPalette: Boolean = true,
+    isEditable: Boolean = false,
+) {
+    val navigator = LocalNavigator.current
+    val isSmallBreakpoint by rememberIsSmallBreakpoint()
+
+    // Data States
+    val playlistDataProvider = remember { PlaylistDataProvider() }
+    val firstVideo = remember(playlistDataProvider) {
+        playlistDataProvider.getVideosForPlaylistWithId(data.id).first()
+    }
+
+    val onViewPlaylist: () -> Unit = remember {
+        {
+            navigator.pushRoute(Route.Playlist(id = data.id))
+        }
+    }
+    val onPlayAll: () -> Unit = remember {
+        {
+            navigator.pushRoute(Route.Video(id = firstVideo.id))
+        }
+    }
+
+    val content = remember {
+        movableContentOf {
+            SpacedRow(
+                spacePx = 16,
+                modifier = Modifier.fillMaxWidth(),
+                centerContentVertically = false,
+            ) {
+                SpacedColumn(
+                    spacePx = 24,
+                    modifier = Modifier.weight(1).margin(top = 9.px),
+                ) {
+                    TextBox(
+                        text = data.name,
+                        size = 18,
+                        weight = FontWeight.Medium,
+                        lineHeight = 25,
+                    )
+                    Wrap(8) {
+                        Image(
+                            modifier = Modifier.clip(Circle()),
+                            src = data.channelAsset,
+                            width = 28,
+                            height = 28,
+                        )
+                        TextBox(
+                            text = data.channelName.orEmpty(),
+                            modifier = Modifier.margin(left = 7.px)
+                        )
+                        if (data.isChannelVerified) {
+                            Image(
+                                src = Asset.Icon.VERIFIED_BADGE,
+                                width = 15,
+                                height = 15
+                            )
+                        }
+                        TextBox(
+                            text = "${data.subscriberCount} subscribers",
+                            size = 14,
+                            color = Styles.VIDEO_CARD_SECONDARY_TEXT
+                        )
+                    }
+                    Wrap(horizontalGapPx = 24, verticalGapPx = 8) {
+                        IconLabel(
+                            iconAsset = Asset.Icon.EYE,
+                            label = data.viewsCount,
+                            secondaryLabel = "views",
+                        )
+                        IconLabel(
+                            iconAsset = Asset.Icon.PLAY,
+                            label = data.videosCount.toString(),
+                            secondaryLabel = "videos",
+                        )
+                        IconLabel(
+                            iconAsset = Asset.Icon.DURATION,
+                            label = data.totalDuration,
+                            secondaryLabel = "duration",
+                        )
+                    }
+                    Wrap(horizontalGapPx = 15, modifier = Modifier.fillMaxWidth()) {
+                        AssetSvgButton(
+                            id = "play_all_button_${data.name}",
+                            isDense = true,
+                            startIconPath = Asset.Path.PLAY,
+                            text = "Play All",
+                            isSelected = true,
+                            onClick = onPlayAll,
+                        )
+                        AssetSvgButton(
+                            id = "share_button_${data.name}",
+                            isDense = true,
+                            startIconPath = Asset.Path.SHARE,
+                            text = "Share",
+                            onClick = {},
+                        )
+                        AssetSvgButton(
+                            id = "add_video_button_${data.name}",
+                            isDense = true,
+                            startIconPath = Asset.Path.ADD_SOLO,
+                            text = "Add video",
+                            onClick = {},
+                        )
+                        AssetSvgButton(
+                            id = "download_button_${data.name}",
+                            isDense = true,
+                            startIconPath = Asset.Path.DOWNLOAD,
+                            text = "Download",
+                            onClick = {},
+                        )
+                    }
+                }
+                AssetImageButton(
+                    asset = Asset.Icon.MORE,
+                    modifier = Modifier.thenIf(!isEditable) { Modifier.margin(top = 9.px) },
+                    onClick = {},
+                )
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxWidth().clickable(onClick = onViewPlaylist)) {
+        if (isSmallBreakpoint) {
+            SpacedColumn(spacePx = 8, modifier = Modifier.fillMaxWidth()) {
+                StackedThumbnail(
+                    assetRef = data.thumbnailImageRef,
+                    videosCount = if (isEditable) null else data.videosCount,
+                    modifier = Modifier.fillMaxWidth(),
+                    showThumbnailColorPalette = showThumbnailColorPalette,
+                    onViewPlaylist = if (isEditable) null else onViewPlaylist,
+                    onPlayAll = if (isEditable) null else onPlayAll,
+                )
+                content()
+            }
+        } else {
+            SpacedRow(
+                spacePx = 16,
+                modifier = Modifier.fillMaxWidth(),
+                centerContentVertically = false,
+            ) {
+                StackedThumbnail(
+                    modifier = Modifier.width(332.px),
+                    assetRef = data.thumbnailImageRef,
+                    videosCount = if (isEditable) null else data.videosCount,
+                    showThumbnailColorPalette = showThumbnailColorPalette,
+                    onViewPlaylist = if (isEditable) null else onViewPlaylist,
+                    onPlayAll = if (isEditable) null else onPlayAll,
+                )
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+private fun StackedThumbnail(
+    onViewPlaylist: (() -> Unit)? = null,
+    onPlayAll: (() -> Unit)? = null,
+    assetRef: String,
+    videosCount: Int?,
+    showThumbnailColorPalette: Boolean,
+    modifier: Modifier = Modifier,
+    borderRadius: CSSLengthOrPercentageValue = 20.px,
+) {
+    val updatedAssetRef = updateTransition(assetRef).currentState
+    var paletteColors by remember { mutableStateOf<List<String>?>(null) }
+    val commonModifier = remember(paletteColors) {
+        Modifier
+            .height(5.px)
+            .borderRadius(topLeft = borderRadius, topRight = borderRadius)
+    }
+    val showHoveredControls = remember { onViewPlaylist != null && onPlayAll != null }
+    var imageRect by remember { mutableStateOf<DOMRectReadOnly?>(null) }
+    var isImageHovered by remember { mutableStateOf(false) }
+    val hoveredControlsAnimatedOpacity by animateFloatAsState(if (isImageHovered) 1f else 0f)
+
+    LaunchedEffect(assetRef, showThumbnailColorPalette) {
+        if (showThumbnailColorPalette) {
+            paletteColors = generateColorPalette(assetRef)
+        }
+    }
+
+    SpacedColumn(
+        spacePx = 2,
+        centerContentHorizontally = true,
+        modifier = Modifier.noShrink().then(modifier),
+    ) {
+        if (showThumbnailColorPalette) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(85.percent)
+                    .then(
+                        paletteColors?.let { colors -> Modifier.background(Color(colors[0])) }
+                            ?: Modifier.display(DisplayStyle.None),
+                    )
+                    .then(commonModifier)
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(91.percent)
+                    .then(
+                        paletteColors?.let { colors -> Modifier.background(Color(colors[1])) }
+                            ?: Modifier.display(DisplayStyle.None),
+                    )
+                    .then(commonModifier)
+            )
+        }
+        Box(
+            contentAlignment = Alignment.BottomEnd,
+            modifier = Modifier
+                .fillMaxSize()
+                .thenIf(showHoveredControls) {
+                    Modifier
+                        .onMouseEnter { isImageHovered = true }
+                        .onMouseLeave { isImageHovered = false }
+                },
+        ) {
+            Crossfade(
+                targetState = updatedAssetRef,
+                modifier = Modifier.fillMaxSize(),
+                animateTranslationY = false,
+            ) { animatedAssetRef ->
+                Image(
+                    ref = if (!showHoveredControls) null else disposableRef { e ->
+                        imageRect = e.getBoundingClientRect()
+                        val observer = ResizeObserver { entries ->
+                            entries.firstOrNull()?.let { entry -> imageRect = entry.contentRect }
+                        }
+                        observer.observe(e)
+                        onDispose {
+                            with(observer) {
+                                disconnect()
+                                unobserve(e)
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .aspectRatio(
+                            width = Constants.SUGGESTION_THUMBNAIL_SIZE.width,
+                            height = Constants.SUGGESTION_THUMBNAIL_SIZE.height
+                        )
+                        .borderRadius(borderRadius)
+                        .objectFit(ObjectFit.Cover),
+                    src = animatedAssetRef,
+                )
+            }
+            videosCount?.let { count ->
+                SpacedRow(
+                    spacePx = 8,
+                    modifier = Modifier.background(Styles.BLACK.copyf(alpha = 0.6f))
+                        .borderRadius(6.px)
+                        .margin(10.px)
+                        .padding(left = 12.px, top = 2.px, right = 8.px, bottom = 2.px),
+                ) {
+                    Image(src = Asset.Icon.PLAYLISTS, width = 24, height = 24)
+                    TextBox(
+                        text = count.toString(),
+                        weight = FontWeight.Medium,
+                        lineHeight = 15.9,
+                    )
+                }
+            } ?: run {
+                AssetImageButton(
+                    modifier = Modifier.clip(Circle()).margin(10.px).padding(7.px),
+                    asset = Asset.Icon.EDIT,
+                    containerColor = Styles.BLACK.copyf(alpha = 0.6f),
+                    onClick = {},
+                )
+            }
+            if (showHoveredControls) {
+                imageRect?.let { rect ->
+                    Box(
+                        modifier = Modifier.background(Styles.BLACK.copyf(alpha = 0.5f))
+                            .borderRadius(borderRadius)
+                            .opacity(hoveredControlsAnimatedOpacity)
+                            .size(width = rect.width.px, height = rect.height.px)
+                            .zIndex(1),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        SpacedRow(15) {
+                            AssetSvgButton(
+                                containerColor = Styles.BLACK.copyf(alpha = 0.4f),
+                                id = "view_playlist_button",
+                                onClick = { onViewPlaylist?.invoke() },
+                                text = "View Playlist",
+                            )
+                            AssetSvgButton(
+                                containerColor = Styles.BLACK.copyf(alpha = 0.4f),
+                                id = "play_all_button",
+                                onClick = { onPlayAll?.invoke() },
+                                text = "Play All",
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
