@@ -34,7 +34,7 @@ fun HomePage () {
     val context = rememberPageContext()
     var isLoading by remember { mutableStateOf(true) }
 
-    console.info( "HomePage Begin" )
+    console.info( "HomePage Begin in Site" )
 
     if (LoginState.current is LoginState.LoggedIn) {
 
